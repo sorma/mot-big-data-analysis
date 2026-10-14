@@ -2,41 +2,33 @@ from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
 
-def split_ambiguous_tests(df: DataFrame):
+def get_ambiguous_test_ids(df: DataFrame) -> DataFrame:
     """
-    Split cleaned MOT test results into:
-    - analytic dataset: test_ids associated with exactly one row
-    - ambiguous dataset: test_ids associated with multiple distinct rows
+    Return test_ids associated with more than one distinct cleaned row.
     """
-
-    test_id_counts = (
+    return (
         df
         .groupBy("test_id")
         .count()
-    )
-
-    unique_test_ids = (
-        test_id_counts
-        .filter(F.col("count") == 1)
-        .select("test_id")
-    )
-
-    ambiguous_test_ids = (
-        test_id_counts
         .filter(F.col("count") > 1)
         .select("test_id")
     )
 
-    analytic_df = df.join(
-        unique_test_ids,
-        on="test_id",
-        how="inner"
-    )
 
-    ambiguous_df = df.join(
-        ambiguous_test_ids,
-        on="test_id",
-        how="inner"
-    )
+def build_analytic_dataset(df: DataFrame) -> DataFrame:
+    """
+    Build the analytic MOT dataset by excluding ambiguous test_ids.
 
-    return analytic_df, ambiguous_df
+    A test_id is considered ambiguous when it is associated with
+    more than one distinct cleaned row.
+    """
+    ambiguous_test_ids = get_ambiguous_test_ids(df)
+
+    return (
+        df
+        .join(
+            ambiguous_test_ids,
+            on="test_id",
+            how="left_anti"
+        )
+    )
