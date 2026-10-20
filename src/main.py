@@ -3,6 +3,7 @@ from pyspark.sql import SparkSession
 from analysis.age_distribution import analyze_age_distribution
 from analysis.failure_by_age import analyze_failure_by_age
 from analysis.failure_by_mileage import analyze_failure_by_mileage
+from analysis.failure_by_age_mileage import analyze_failure_by_age_mileage
 
 PARQUET_PATH = (
     "/app/data/processed/parquet/test_results_2024"
@@ -33,7 +34,7 @@ def main():
     # 1. Load processed dataset
     # --------------------------------------------------
 
-    print("\n[1/4] Loading processed Parquet dataset...")
+    print("\n[1/5] Loading processed Parquet dataset...")
 
     df = spark.read.parquet(PARQUET_PATH)
 
@@ -42,7 +43,7 @@ def main():
     # 2. Vehicle age distribution
     # --------------------------------------------------
 
-    print("\n[2/4] Vehicle age distribution...")
+    print("\n[2/5] Vehicle age distribution...")
 
     age_distribution_df = analyze_age_distribution(df)
 
@@ -65,7 +66,7 @@ def main():
     # 3. Failure rate by vehicle age
     # --------------------------------------------------
 
-    print("\n[3/4] Failure rate by vehicle age...")
+    print("\n[3/5] Failure rate by vehicle age...")
 
     failure_by_age_df = analyze_failure_by_age(df)
 
@@ -88,13 +89,15 @@ def main():
     # 4. Failure rate by mileage
     # --------------------------------------------------
 
-    print("\n[4/4] Failure rate by mileage...")
+    print("\n[4/5] Failure rate by mileage...")
 
     failure_by_mileage_df = analyze_failure_by_mileage(df)
 
     failure_by_mileage_df.show(
         truncate=False
     )
+
+    
 
     # Save result as CSV
     (
@@ -106,6 +109,24 @@ def main():
         .csv(f"{RESULTS_PATH}/failure_by_mileage")
     )
 
+    print("\n[5/5] Failure rate by vehicle age and mileage...")
+
+    failure_by_age_mileage_df = analyze_failure_by_age_mileage(df)
+
+    failure_by_age_mileage_df.show(
+        100,
+        truncate=False
+    )
+
+    (
+        failure_by_age_mileage_df
+        .coalesce(1)
+        .write
+        .mode("overwrite")
+        .option("header", True)
+        .csv(f"{RESULTS_PATH}/failure_by_age_mileage")
+    )
+    
 
     print("\n=== RESULTS SAVED ===")
     print(f"Results directory: {RESULTS_PATH}")
